@@ -1,0 +1,42 @@
+---
+kind: pipeline
+name: build
+
+steps:
+  - name: dryrun
+    image: plugins/docker
+    settings:
+      cache_from: lddsb/drone-cnpm-sync
+      dockerfile: Dockerfile
+      dryrun: true
+      repo: lddsb/drone-cnpm-sync
+      tags:
+        - latest
+        - 0.1.0
+      when:
+        event:
+          - pull_request
+
+  - name: publish
+    image: plugins/docker
+    settings:
+      repo: lddsb/drone-cnpm-sync
+      dockerfile: Dockerfile
+      tags:
+        - latest
+        - 0.1.0
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+      when:
+        status:
+          - success
+        event:
+          - tag
+
+trigger:
+  ref:
+    - refs/headers/master
+    - 'refs/pull/**'
+    - 'refs/tags/**'
