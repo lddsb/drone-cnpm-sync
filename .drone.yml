@@ -11,11 +11,14 @@ steps:
       dryrun: true
       repo: lddsb/drone-cnpm-sync
       tags:
-        - latest
-        - 0.1.0
-      when:
-        event:
-          - pull_request
+        - beta
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+    when:
+      event:
+        - pull_request
 
   - name: publish
     image: plugins/docker
@@ -29,11 +32,11 @@ steps:
         from_secret: docker_username
       password:
         from_secret: docker_password
-      when:
-        status:
-          - success
-        event:
-          - tag
+    when:
+      status:
+        - success
+      event:
+        - tag
 
 trigger:
   ref:
