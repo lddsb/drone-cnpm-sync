@@ -25,6 +25,12 @@ func main() {
 			Usage: "the path to package.json",
 			EnvVar: "PLUGIN_PATH",
 		},
+		cli.UintFlag{
+			Name: "retry",
+			Usage: "not found retry max times",
+			EnvVar: "PLUGIN_RETRY",
+			Value: 10,
+		},
 	}
 
 	_ = app.Run(os.Args)
@@ -33,6 +39,7 @@ func main() {
 func run(c *cli.Context) {
 	plugin := Plugin{
 		Path: c.StringSlice("paths"),
+		Retry: c.Uint("retry"),
 	}
 
 	if err := plugin.Exec(); err != nil {

@@ -15,15 +15,16 @@ import (
 type (
 	Plugin struct {
 		Path []string
+		Retry uint
 	}
 )
 
-func (p Plugin) Exec() error  {
+func (p Plugin) Exec() error {
 	startAt := time.Now()
 
 	if 0 == len(p.Path) {
 		// setting default path
-		p.Path = []string {"package.json"}
+		p.Path = []string{"package.json"}
 	}
 
 	packageLists := getPackages(p.Path)
@@ -32,7 +33,22 @@ func (p Plugin) Exec() error  {
 		go syncPackage(packageName)
 		for _, version := range packageList {
 			wg.Add(1)
-			go checkVersion(packageName, version)
+			go func(name, version string) {
+				defer wg.Done()
+				checkTime := 0
+				ok := checkVersion(name, version)
+				for !ok {
+					if uint(checkTime) > p.Retry {
+						fmt.Println("package: ", name, " ,version: ", version, " ,sync timeout")
+						break
+					}
+
+					syncPackage(name)
+					checkTime++
+					ok = checkVersion(name, version)
+				}
+			}(packageName, version)
+			//go checkVersion(packageName, version)
 		}
 	}
 
@@ -102,7 +118,7 @@ func getPackages(paths []string) map[string][]string {
 }
 
 func syncPackage(p string) {
-	baseURL := "https://npm.taobao.org/sync"
+	baseURL := "https://cnpmjs.org/sync"
 
 	url := fmt.Sprintf("%s/%s", baseURL, p)
 
@@ -111,7 +127,7 @@ func syncPackage(p string) {
 
 func checkVersion(packageName, packageVersion string) bool {
 
-	baseUrl := "https://registry.npm.taobao.org"
+	baseUrl := "https://r.cnpmjs.org"
 
 	url := fmt.Sprintf("%s/%s", baseUrl, packageName)
 
@@ -137,13 +153,10 @@ func checkVersion(packageName, packageVersion string) bool {
 	}
 
 	if _, ok := v["versions"].(map[string]interface{})[packageVersion]; ok {
-		defer wg.Done()
 		fmt.Println("package: ", packageName, ", version: ", packageVersion, ", sync success")
 		return true
 	}
 
-	wg.Add(1)
-
+	fmt.Println("package: ", packageName, " ,version: ", packageVersion, " not found!")
 	return false
 }
-
